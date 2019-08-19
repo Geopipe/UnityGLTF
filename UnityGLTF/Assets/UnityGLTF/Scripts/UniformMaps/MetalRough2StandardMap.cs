@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace UnityGLTF
 {
@@ -12,8 +13,22 @@ namespace UnityGLTF
 
 		public virtual Texture BaseColorTexture
 		{
-			get { return _material.GetTexture("_MainTex"); }
-			set { _material.SetTexture("_MainTex", value); }
+			get { 
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					return _material.GetTexture("_MainTex"); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") { 
+					return _material.GetTexture("_BaseColorMap"); }
+				else { 
+					return _material.GetTexture("_MainTex"); }
+			}
+			set {
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					_material.SetTexture("_MainTex",value); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") { 
+					_material.SetTexture("_BaseColorMap", value); }
+				else { 
+					_material.SetTexture("_MainTex", value); }
+			}
 		}
 
 		// not implemented by the Standard shader
@@ -29,7 +44,12 @@ namespace UnityGLTF
 			set {
 				baseColorOffset = value;
 				var unitySpaceVec = new Vector2(baseColorOffset.x, 1 - BaseColorXScale.y - baseColorOffset.y);
-				_material.SetTextureOffset("_MainTex", unitySpaceVec);
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					_material.SetTextureOffset("_MainTex",unitySpaceVec); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") {
+					_material.SetTextureOffset("_BaseColorMap", unitySpaceVec); }
+				else {
+					_material.SetTextureOffset("_MainTex", unitySpaceVec); }
 			}
 		}
 
@@ -41,9 +61,21 @@ namespace UnityGLTF
 
 		public virtual Vector2 BaseColorXScale
 		{
-			get { return _material.GetTextureScale("_MainTex"); }
+			get { 
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					return _material.GetTextureScale("_MainTex"); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") { 
+					return _material.GetTextureScale("_BaseColorMap"); }
+				else {
+					return _material.GetTextureScale("_MainTex"); }
+			}
 			set {
-				_material.SetTextureScale("_MainTex", value);
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					_material.SetTextureScale("_MainTex", value); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") {
+					_material.SetTextureScale("_BaseColorMap", value); }
+				else {
+					_material.SetTextureScale("_MainTex", value); }
 				BaseColorXOffset = baseColorOffset;
 			}
 		}
@@ -56,8 +88,22 @@ namespace UnityGLTF
 
 		public virtual Color BaseColorFactor
 		{
-			get { return _material.GetColor("_Color"); }
-			set { _material.SetColor("_Color", value); }
+			get {
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					return _material.GetColor("_Color"); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") {
+					return _material.GetColor("_BaseColor"); }
+				else {
+					return _material.GetColor("_Color"); }
+			}
+			set {
+				if (GraphicsSettings.renderPipelineAsset == null) {
+					_material.SetColor("_Color", value); }
+				else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") {
+					_material.SetColor("_BaseColor", value); }
+				else {
+					_material.SetColor("_Color", value); }
+			}
 		}
 
 		public virtual Texture MetallicRoughnessTexture
