@@ -1,5 +1,8 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.Rendering;
+// Geopipe
+// using UnityEngine.Experimental.Rendering;
 using AlphaMode = GLTF.Schema.AlphaMode;
 using CullMode = UnityEngine.Rendering.CullMode;
 
@@ -9,7 +12,8 @@ namespace UnityGLTF
 	{
 		private Vector2 metalRoughOffset = new Vector2(0, 0);
 
-		public MetalRoughMap(int MaxLOD = 1000) : base("GLTF/PbrMetallicRoughness", MaxLOD) { }
+		// Geopipe
+		public MetalRoughMap(int MaxLOD = 1000) : base("GLTF/PbrMetallicRoughness",MaxLOD) { }
 		public MetalRoughMap(string shaderName, int MaxLOD = 1000) : base(shaderName, MaxLOD) { }
 		protected MetalRoughMap(Material m, int MaxLOD = 1000) : base(m, MaxLOD) { }
 

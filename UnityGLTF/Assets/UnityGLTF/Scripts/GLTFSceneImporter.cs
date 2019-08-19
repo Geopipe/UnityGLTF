@@ -299,6 +299,8 @@ namespace UnityGLTF
 			}
 			catch (Exception ex)
 			{
+				// Geopipe
+				Debug.unityLogger.LogError("DEBUG",ex);
 				Cleanup();
 
 				onLoadComplete?.Invoke(null, ExceptionDispatchInfo.Capture(ex));
@@ -330,11 +332,38 @@ namespace UnityGLTF
 		/// <returns></returns>
 		public async Task LoadNodeAsync(int nodeIndex, CancellationToken cancellationToken)
 		{
-			await SetupLoad(async () =>
+			try
 			{
+				lock (this)
+				{
+					if (_isRunning)
+					{
+						throw new GLTFLoadException("Cannot call LoadNode while GLTFSceneImporter is already running");
+					}
+
+					_isRunning = true;
+				}
+
+				if (_gltfRoot == null)
+				{
+					await LoadJson(_gltfFileName);
+				}
+
+				if (_assetCache == null)
+				{
+					_assetCache = new AssetCache(_gltfRoot);
+				}
+
 				CreatedObject = await GetNode(nodeIndex, cancellationToken);
 				InitializeGltfTopLevelObject();
-			});
+			}
+			finally
+			{
+				lock (this)
+				{
+					_isRunning = false;
+				}
+			}
 		}
 
 		/// <summary>
@@ -344,11 +373,31 @@ namespace UnityGLTF
 		/// <returns></returns>
 		public virtual async Task<Material> LoadMaterialAsync(int materialIndex)
 		{
-			await SetupLoad(async () =>
+			try
 			{
+				lock (this)
+				{
+					if (_isRunning)
+					{
+						throw new GLTFLoadException("Cannot CreateTexture while GLTFSceneImporter is already running");
+					}
+
+					_isRunning = true;
+				}
+
+				if (_gltfRoot == null)
+				{
+					await LoadJson(_gltfFileName);
+				}
+
 				if (materialIndex < 0 || materialIndex >= _gltfRoot.Materials.Count)
 				{
 					throw new ArgumentException($"There is no material for index {materialIndex}");
+				}
+
+				if (_assetCache == null)
+				{
+					_assetCache = new AssetCache(_gltfRoot);
 				}
 
 				if (_assetCache.MaterialCache[materialIndex] == null)
@@ -357,32 +406,16 @@ namespace UnityGLTF
 					await ConstructMaterialImageBuffers(def);
 					await ConstructMaterial(def, materialIndex);
 				}
-			});
-			return _assetCache.MaterialCache[materialIndex].UnityMaterialWithVertexColor;
-		}
-
-		/// <summary>
-		/// Load a Mesh from the glTF by index
-		/// </summary>
-		/// <param name="meshIndex"></param>
-		/// <returns></returns>
-		public virtual async Task<Mesh> LoadMeshAsync(int meshIndex, CancellationToken cancellationToken)
-		{
-			await SetupLoad(async () =>
+			}
+			finally
 			{
-				if (meshIndex < 0 || meshIndex >= _gltfRoot.Meshes.Count)
+				lock (this)
 				{
-					throw new ArgumentException($"There is no mesh for index {meshIndex}");
+					_isRunning = false;
 				}
+			}
 
-				if (_assetCache.MeshCache[meshIndex] == null)
-				{
-					var def = _gltfRoot.Meshes[meshIndex];
-					await ConstructMeshAttributes(def, new MeshId() { Id = meshIndex, Root = _gltfRoot });
-					await ConstructMesh(def, meshIndex, cancellationToken);
-				}
-			});
-			return _assetCache.MeshCache[meshIndex].LoadedMesh;
+			return _assetCache.MaterialCache[materialIndex].UnityMaterialWithVertexColor;
 		}
 
 		/// <summary>
@@ -844,6 +877,9 @@ namespace UnityGLTF
 					Offset = (uint)bufferData.ChunkOffset
 				};
 			}
+
+			// Geopipe
+			attributeAccessors.Remove("_BATCHID");
 
 			GLTFHelpers.BuildMeshAttributes(ref attributeAccessors);
 			TransformAttributes(ref attributeAccessors);
@@ -1558,7 +1594,7 @@ namespace UnityGLTF
 
 			if (_assetCache.MeshCache[meshIndex] == null)
 			{
-				throw new Exception("Cannot generate mesh before ConstructMeshAttributes is called!");
+				throw new Exception("Cannot generate mesh before ConstructBufferData is called!");
 			}
 
 			var totalVertCount = mesh.Primitives.Aggregate((uint)0, (sum, p) => sum + p.Attributes[SemanticProperties.POSITION].Value.Count);
@@ -1876,7 +1912,20 @@ namespace UnityGLTF
 				}
 				else
 				{
-					mapper = new MetalRoughMap(MaximumLod);
+					// Geopipe
+					// mapper = new MetalRoughMap(MaximumLod);
+					if (GraphicsSettings.renderPipelineAsset == null)
+					{
+						mapper = new MetalRoughMap("GLTF/PbrMetallicRoughness",MaximumLod);
+					}
+					else if (GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset")
+					{
+						mapper = new MetalRoughMap("HDRP/Lit",MaximumLod);
+					}
+					else
+					{
+						mapper = new MetalRoughMap("GLTF/PbrMetallicRoughness",MaximumLod);
+					}
 				}
 			}
 
@@ -2074,11 +2123,6 @@ namespace UnityGLTF
 					}
 
 					_isRunning = true;
-				}
-
-				if (_options.ThrowOnLowMemory)
-				{
-					_memoryChecker = new MemoryChecker();
 				}
 
 				if (_gltfRoot == null)
@@ -2312,50 +2356,6 @@ namespace UnityGLTF
 			{
 				_assetCache.Dispose();
 				_assetCache = null;
-			}
-		}
-
-		private async Task SetupLoad(Func<Task> callback)
-		{
-			try
-			{
-				lock (this)
-				{
-					if (_isRunning)
-					{
-						throw new GLTFLoadException("Cannot start a load while GLTFSceneImporter is already running");
-					}
-
-					_isRunning = true;
-				}
-
-				if (_options.ThrowOnLowMemory)
-				{
-					_memoryChecker = new MemoryChecker();
-				}
-
-				if (_gltfRoot == null)
-				{
-					await LoadJson(_gltfFileName);
-				}
-
-				if (_assetCache == null)
-				{
-					_assetCache = new AssetCache(_gltfRoot);
-				}
-
-				await callback();
-			}
-			catch
-			{
-				Cleanup();
-			}
-			finally
-			{
-				lock (this)
-				{
-					_isRunning = false;
-				}
 			}
 		}
 	}

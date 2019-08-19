@@ -16,8 +16,8 @@ namespace UnityGLTF
 	{
 		public string GLTFUri = null;
 		public bool Multithreaded = true;
-		public bool UseStream = false;
-		public bool AppendStreamingAssets = true;
+		public bool UseStream = true;
+		public bool AppendStreamingAssets = false;
 		public bool PlayAnimationOnLoad = true;
         public ImporterFactory Factory = null;
 
@@ -31,6 +31,10 @@ namespace UnityGLTF
 		[SerializeField] private int RetryCount = 10;
 		[SerializeField] private float RetryTimeout = 2.0f;
 		private int numRetries = 0;
+
+		[HideInInspector]
+		public Stream ReadStream;
+		public bool loaded = false;
 
 
 		public int MaximumLod = 300;
@@ -92,7 +96,8 @@ namespace UnityGLTF
 						fullPath = GLTFUri;
 					}
 					string directoryPath = URIHelper.GetDirectoryName(fullPath);
-					importOptions.ExternalDataLoader = new FileLoader(directoryPath);
+					// importOptions.ExternalDataLoader = new FileLoader(directoryPath);
+					importOptions.ExternalDataLoader = new StreamLoader(ReadStream);
 					sceneImporter = Factory.CreateSceneImporter(
 						Path.GetFileName(GLTFUri),
 						importOptions
@@ -148,6 +153,7 @@ namespace UnityGLTF
 				{
 					Animations.FirstOrDefault().Play();
 				}
+				
 			}
 			finally
 			{
@@ -158,6 +164,7 @@ namespace UnityGLTF
 					importOptions.ExternalDataLoader = null;
 				}
 			}
+			loaded = true;
 		}
 	}
 }

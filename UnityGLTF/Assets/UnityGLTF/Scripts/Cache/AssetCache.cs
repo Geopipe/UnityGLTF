@@ -82,14 +82,15 @@ namespace UnityGLTF.Cache
 					{
 						if (bufferCacheData.Stream != null)
 						{
-#if !WINDOWS_UWP
-							bufferCacheData.Stream.Close();
+#if !WINDOWS_UWP			// Geopipe
+							// bufferCacheData.Stream.Close();
 #else
 							bufferCacheData.Stream.Dispose();
 #endif
                         }
 
-                        bufferCacheData.Dispose();
+						// Geopipe
+                        // bufferCacheData.Dispose();
 					}
 				}
 				BufferCache = null;
