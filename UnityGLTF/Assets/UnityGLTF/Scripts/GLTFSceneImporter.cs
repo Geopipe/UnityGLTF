@@ -188,6 +188,13 @@ namespace UnityGLTF
 		protected ImportProgress progressStatus = default(ImportProgress);
 		protected IProgress<ImportProgress> progress = null;
 
+		//Geopipe
+		private Material baseWater = (Material)Resources.Load("SimpleWater", typeof(Material));
+		private Material baseWindow = (Material)Resources.Load("SimpleWindow", typeof(Material));
+		private Material HDWater = (Material)Resources.Load("WaterShader", typeof(Material));
+		private Material HDWindow = (Material)Resources.Load("Glass", typeof(Material));
+		private Material testWindow = (Material)Resources.Load("OpaqueWindow", typeof(Material));
+
 		public GLTFSceneImporter(string gltfFileName, ImportOptions options)
 		{
 			_gltfFileName = gltfFileName;
@@ -1457,6 +1464,20 @@ namespace UnityGLTF
 						meshConvexCollider.convex = true;
 						break;
 				}
+				// Geopipe
+				
+				if (nodeObj.GetComponent<Renderer>() != null && nodeObj.GetComponent<Renderer>().materials[0] != null && GraphicsSettings.renderPipelineAsset != null && GraphicsSettings.renderPipelineAsset.name == "HDRenderPipelineAsset") {	
+					if (nodeObj.GetComponent<Renderer>().materials[0].GetColor("_BaseColor") == baseWater.GetColor("_BaseColor")) {
+						Debug.unityLogger.Log("Loading HD water");
+						nodeObj.GetComponent<Renderer>().material = HDWater;
+					}
+					if (nodeObj.GetComponent<Renderer>().materials[0].GetColor("_BaseColor") == baseWindow.GetColor("_BaseColor")) {
+						Debug.unityLogger.Log("Loading HD window");
+						nodeObj.GetComponent<Renderer>().material = HDWindow;
+						
+					}
+				}
+				
 			}
 			/* TODO: implement camera (probably a flag to disable for VR as well)
 			if (camera != null)
